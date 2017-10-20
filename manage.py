@@ -3,7 +3,7 @@ import uuid
 from threading import Thread
 from PIL import Image
 
-from flask import Flask, session, render_template, redirect, url_for, flash
+from flask import Flask, session, render_template, redirect, url_for, flash, request
 from flask_bootstrap import Bootstrap
 from flask_script import Manager
 from flask_wtf import FlaskForm
@@ -91,8 +91,11 @@ def show():
         flash('欢迎' + form.username.data + '光临')
         session['username'] = form.username.data
         session['email'] = form.mail.data
+        suffix = os.path.splitext(request.files['photo'].filename)[1]
+        name = rand_str() + suffix
+
         # 保存文件
-        filename = photos.save(form.photo.data)
+        filename = photos.save(form.photo.data, name=name)
         # 生成缩略图
         filepath = os.path.join(app.config['UPLOADED_PHOTOS_DEST'], filename)
         img = Image.open(filepath)
