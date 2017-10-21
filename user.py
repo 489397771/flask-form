@@ -36,6 +36,7 @@ class User(db.Model):
     email = db.Column(db.String(64), unique=True)
     imgpath = db.Column(db.String(128), unique=True)
     time = db.Column(db.DateTime(), unique=True)
+    delete = db.Column(db.Boolean(), default=1)
 
 
 # 表单类

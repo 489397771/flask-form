@@ -2,10 +2,11 @@ import os
 from threading import Thread
 from flask import Flask, render_template
 from flask_bootstrap import Bootstrap
-from flask_script import Manager
+from flask_script import Manager, Shell
 from flask_sqlalchemy import SQLAlchemy
 from flask_uploads import UploadSet, IMAGES, configure_uploads, patch_request_class
 from flask_mail import Mail, Message
+from flask_migrate import MigrateCommand, Migrate
 from user import user
 
 app = Flask(__name__)
@@ -27,9 +28,10 @@ patch_request_class(app, size=None)
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER') or 'smtp.163.com'
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME') or 'zhentaoyangs7@163.com'
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD') or '6188690iswO'
+mail = Mail(app)
 bootstrap = Bootstrap(app)
 manager = Manager(app)
-mail = Mail(app)
+
 
 # 数据库配置
 Database_uri = 'mysql://root:122121@127.0.0.1:3306/flask_test1'
@@ -43,6 +45,10 @@ app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.register_blueprint(user, url_prefix='/user')
 # 创建对象
 db = SQLAlchemy(app)
+# 创建迁移对象
+migrate = Migrate(app, db)
+# 添加终端生成命令
+manager.add_command('db', MigrateCommand)
 
 
 # 异步发送邮箱任务
@@ -55,13 +61,21 @@ def async_send_mail(app, msg):
 
 # 发送邮件函数
 def send_mail(to, subject, template, **kwargs):
-    msg = Message(subject=subject, sender=app.config['MAIL_USERNAME'],recipients=[to])
-    msg.body = render_template(template + '.txt', kwargs.get('name'))
-    msg.html = render_template(template + '.html',kwargs.get('name'))
+    msg = Message(subject=subject, sender=app.config['MAIL_USERNAME'], recipients=[to])
+    msg.body = render_template(template + '.txt', name=kwargs.get('name'))
+    msg.html = render_template(template + '.html', name=kwargs.get('name'))
     # 创建线程
     thr = Thread(target=async_send_mail, args=[app, msg])
     thr.start()
     return thr
+
+
+def shell_maka_context():
+    # 返回的数据作为shell启动时的上下文
+    return dict(db=db, user=user, app=app)
+
+
+manager.add_command('shell', Shell(make_context=shell_maka_context()))
 
 
 @app.route('/')
