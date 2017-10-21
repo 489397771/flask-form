@@ -1,18 +1,12 @@
 import os
-import uuid
 from threading import Thread
-from PIL import Image
-
-from flask import Flask, session, render_template, redirect, url_for, flash, request
+from flask import Flask, render_template
 from flask_bootstrap import Bootstrap
 from flask_script import Manager
-from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileAllowed, FileRequired
-from wtforms import StringField, SubmitField, PasswordField, DateTimeField, ValidationError
-from wtforms.validators import DataRequired, Length, Email
+from flask_sqlalchemy import SQLAlchemy
 from flask_uploads import UploadSet, IMAGES, configure_uploads, patch_request_class
 from flask_mail import Mail, Message
-
+from user import user
 
 app = Flask(__name__)
 # 密钥配置
@@ -37,27 +31,18 @@ bootstrap = Bootstrap(app)
 manager = Manager(app)
 mail = Mail(app)
 
-
-class NameForm(FlaskForm):
-    username = StringField('username', validators=[DataRequired(), Length(1, 12)])
-    # length(6, 12, message='6~12字符')message 是指定输入格式错误提示
-    password = PasswordField('password', validators=[DataRequired(), Length(6, 12)])
-    mail = StringField('user email', validators=[DataRequired(), Email()])
-    time = DateTimeField('create time')
-    photo = FileField('user picture', validators=[FileRequired(), FileAllowed(photos)])
-    submit = SubmitField('submit')
-
-    # 自定义验证器，格式：‘validate_字段’。仅限于验证信息后提示错误信息用
-    # 以validate_开头的函数会自动校验'_'后面的对应名字的字段
-    # 此函数功能和length()功能差不多，只是作为演示例子用
-    # def validate_username(self, field):
-    #     if len(field.data) < 6:
-    #         raise ValidationError('不能少于6个字符')
-
-
-# 随机生成的字符串
-def rand_str(length=32):
-    return str(uuid.uuid4())[0:length]
+# 数据库配置
+Database_uri = 'mysql://root:122121@127.0.0.1:3306/flask_test1'
+app.config['SQLALCHEMY_DATABASE_URI'] = Database_uri
+# 禁止对象更改追踪
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# 配置自动提交(在请求结束时自动执行提交操作)
+# 否则每次数据提
+app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
+# 引入蓝本
+app.register_blueprint(user, url_prefix='/user')
+# 创建对象
+db = SQLAlchemy(app)
 
 
 # 异步发送邮箱任务
@@ -71,8 +56,8 @@ def async_send_mail(app, msg):
 # 发送邮件函数
 def send_mail(to, subject, template, **kwargs):
     msg = Message(subject=subject, sender=app.config['MAIL_USERNAME'],recipients=[to])
-    msg.body = render_template(template + '.txt')
-    msg.html = render_template(template + '.html')
+    msg.body = render_template(template + '.txt', kwargs.get('name'))
+    msg.html = render_template(template + '.html',kwargs.get('name'))
     # 创建线程
     thr = Thread(target=async_send_mail, args=[app, msg])
     thr.start()
@@ -81,51 +66,7 @@ def send_mail(to, subject, template, **kwargs):
 
 @app.route('/')
 def index():
-    return 'success'
-
-
-@app.route('/form/', methods=['POST', 'GET'])
-def show():
-    form = NameForm()
-    if form.validate_on_submit():
-        flash('欢迎' + form.username.data + '光临')
-        session['username'] = form.username.data
-        session['email'] = form.mail.data
-        suffix = os.path.splitext(request.files['photo'].filename)[1]
-        name = rand_str() + suffix
-
-        # 保存文件
-        filename = photos.save(form.photo.data, name=name)
-        # 生成缩略图
-        filepath = os.path.join(app.config['UPLOADED_PHOTOS_DEST'], filename)
-        img = Image.open(filepath)
-        img.thumbnail((64, 64))
-        img.save(filepath)
-        # 获取文件url
-        img_url = photos.url(filename)
-        session['img_url'] = img_url
-        return redirect(url_for('show'))
-    name = session.get('username')
-    img_url = session.get('img_url')
-    email = session.get('email')
-    try:
-        send_mail(email, '激活验证信息', 'account', name=name)
-        if email is not None:
-            flash('激活信息已发送，请到注册邮箱中查收')
-    except TypeError as e:
-        pass
-    return render_template('index.html', form=form, name=name, img_url=img_url)
-
-
-@app.route('/session_clc/')
-def session_clc():
-    if session.get('username') is not None:
-        name = session['username']
-        session.clear()
-        flash('已清除' + name + '的所有信息')
-    else:
-        flash('无用户信息,无需注销')
-    return redirect(url_for('show'))
+    return render_template('base.html')
 
 
 if __name__ == '__main__':

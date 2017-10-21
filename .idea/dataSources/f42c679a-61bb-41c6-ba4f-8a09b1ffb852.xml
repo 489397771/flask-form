@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataSource name="@localhost">
+  <database-model serializer="dbm" rdbms="MYSQL" format-version="4.4">
+    <root id="1"/>
+    <schema id="2" parent="1" name="axf">
+      <Current>1</Current>
+    </schema>
+    <schema id="3" parent="1" name="flask_test"/>
+    <schema id="4" parent="1" name="flask_test1">
+      <Visible>1</Visible>
+    </schema>
+    <schema id="5" parent="1" name="helen"/>
+    <schema id="6" parent="1" name="helen1"/>
+    <schema id="7" parent="1" name="helen2"/>
+    <schema id="8" parent="1" name="helen3"/>
+    <schema id="9" parent="1" name="helen4"/>
+    <schema id="10" parent="1" name="information_schema"/>
+    <schema id="11" parent="1" name="mysql"/>
+    <schema id="12" parent="1" name="performance_schema"/>
+    <schema id="13" parent="1" name="sys"/>
+  </database-model>
+</dataSource>
